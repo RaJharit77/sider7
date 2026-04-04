@@ -1967,27 +1967,16 @@ wchar_t* _have_live_file(char *file_name)
         fn[0] = L'\0';
         wcsncat(fn, it->c_str(), 512);
         wchar_t *p = (unicode_filename[0] == L'\\') ? unicode_filename + 1 : unicode_filename;
-        wcsncat(fn, p, 512);
-
-        HANDLE handle;
-        handle = CreateFileW(fn,           // file to open
-                           GENERIC_READ,          // open for reading
-                           FILE_SHARE_READ,       // share for reading
-                           NULL,                  // default security
-                           OPEN_EXISTING,         // existing file only
-                           FILE_ATTRIBUTE_NORMAL,  // normal file
-                           NULL);                 // no attr. template
-
-        if (handle != INVALID_HANDLE_VALUE)
+        wcsncat_s(fn, sizeof(fn)/sizeof(wchar_t), p, _TRUNCATE);
+        
+        Utf8::free(unicode_filename);
+        DWORD attr = GetFileAttributesW(fn);
+        if (attr != INVALID_FILE_ATTRIBUTES && !(attr & FILE_ATTRIBUTE_DIRECTORY))
         {
-            CloseHandle(handle);
-            Utf8::free(unicode_filename);
-            //return new wstring(fn);
-            return wcsdup(fn);
+            return _wcsdup(fn);
         }
     }
 
-    Utf8::free(unicode_filename);
     return NULL;
 }
 
