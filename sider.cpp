@@ -3497,7 +3497,7 @@ void draw_text(float font_size, float right_margin, DWORD text_color)
 	//pFW1Factory->Release();
 }
 
-void draw_ui(float top, float bottom, float right_margin, DWORD text_color, DWORD bg_color, float image_alpha_override)
+void draw_ui(float top, float bottom, float right_margin, DWORD text_color, DWORD bg_color, float image_alpha)
 {
     // Convert DWORD AABBGGRR to normalized float RGBA components for vertex color
     float r = (bg_color & 0xFF) / 255.0f;
@@ -3580,9 +3580,8 @@ void draw_ui(float top, float bottom, float right_margin, DWORD text_color, DWOR
         DX11.Context->PSSetShaderResources( 0, 1, &g_textureView );
         DX11.Context->PSSetSamplers( 0, 1, &g_pSamplerLinear );
 
-        // Update image alpha with override or use config default
-        float maxAlpha = (image_alpha_override > 0.0f) ? image_alpha_override : g_constants.maxAlpha;
-        g_constants.maxAlpha = maxAlpha;
+        // Update image alpha
+        g_constants.maxAlpha = image_alpha;
 
         // Update constant buffer with new maxAlpha value using UpdateSubresource
         DX11.Context->UpdateSubresource(g_pConstantBuffer, 0, NULL, &g_constants, 0, 0);
@@ -4520,7 +4519,11 @@ HRESULT sider_Present(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags)
                     // Extract dynamic properties from options, with fallback to config defaults
                     DWORD text_color = opts.has_text_color ? opts.text_color : _config->_overlay_text_color;
                     DWORD bg_color = opts.has_background_color ? opts.background_color : _config->_overlay_background_color;
-                    float image_alpha = opts.has_image_alpha ? opts.image_alpha : 0.0f;
+                    float image_alpha = opts.has_image_alpha ? opts.image_alpha : _config->_overlay_image_alpha_max;
+                    // clamp to [0,1]
+                    image_alpha = (image_alpha < 0.0f) ? 0.0f : image_alpha;
+                    image_alpha = (image_alpha > 1.0f) ? 1.0f : image_alpha;
+
                     draw_ui(top, top + pixel_height, right_margin, text_color, bg_color, image_alpha);
                 }
                 SAFE_RELEASE(g_pVertexBuffer);
