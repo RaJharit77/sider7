@@ -391,6 +391,22 @@ Konami screen, then try setting this option to 0. It should help.
 </p>
 
 <pre>
+save.folder = ".\save"
+</pre>
+
+<p>- If specified (not empty string), then all the load/save operations
+on such files as EDIT00000000, SYSTEM00000000, GRAPHICS00000000, CUP*, LG*, ML*
+and all the other files will be redirected from the standard game folder, which
+would normally be something like <b>C:\Users\Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\{someid}\save</b>, to the
+folder path provided. The folder must exist, as it will not be created automatically.</p>
+
+<p>The value can be a relative pahth - starting with "." character, in which case
+it will be relative to sider home directory. For example, <b>.\save</b>.
+Or, it can contain an absolute path: <b>C:\mystuff\pes\save</b>.
+</p>
+
+
+<pre>
 vkey.reload-1 = 0x10
 vkey.reload-2 = 0x52
 </pre>
