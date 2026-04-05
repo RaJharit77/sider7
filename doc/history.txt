@@ -2,6 +2,14 @@ Sider 7 Release History
 =======================
 
 
+April 4, 2026
+v7.4.0
+- support for controlling overlay text/background colors and image alpha from Lua modules. Thanks to Mohamed2746!
+- now supporting "save.folder" option in sider.ini - to better support patches that need their own EDIT00000000 and other files
+- IMPORTANT NOTE: memory hack used in colorsdemo.lua (and other modules that copied it) no longer works
+    and will cuse crashes. Do NOT USE IT with this version of sider!
+
+
 February 16, 2026
 v7.3.4
 - fixes for stack alignment, needed to run on Windows 11 with patched games
