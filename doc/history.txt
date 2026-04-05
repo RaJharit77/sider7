@@ -6,8 +6,9 @@ April 4, 2026
 v7.4.0
 - support for controlling overlay text/background colors and image alpha from Lua modules. Thanks to Mohamed2746!
 - now supporting "save.folder" option in sider.ini - to better support patches that need their own EDIT00000000 and other files
-- IMPORTANT NOTE: memory hack used in colorsdemo.lua (and other modules that copied it) no longer works
-    and will cuse crashes. Do NOT USE IT with this version of sider!
+- IMPORTANT NOTE: memory hack used in colorsdemo.lua (and other modules that copied it) no longer works with this
+    version of sider and will cause crashes and memory corruption. Do NOT USE IT!
+    There is a much simpler way now to change colors: see colorsdemo2.lua and overlay_colors_test.lua example modules
 
 
 February 16, 2026
