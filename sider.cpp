@@ -3499,12 +3499,6 @@ void draw_text(float font_size, float right_margin, DWORD text_color)
 
 void draw_ui(float top, float bottom, float right_margin, DWORD text_color, DWORD bg_color, float image_alpha_override)
 {
-    // Use provided colors or fall back to config defaults
-    if (!text_color)
-        text_color = _config->_overlay_text_color;
-    if (!bg_color)
-        bg_color = _config->_overlay_background_color;
-
     // Convert DWORD AABBGGRR to normalized float RGBA components for vertex color
     float r = (bg_color & 0xFF) / 255.0f;
     float g = ((bg_color >> 8) & 0xFF) / 255.0f;
