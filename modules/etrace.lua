@@ -2,6 +2,7 @@
 -- prints event and context info, reacting to various events
 
 local m = {}
+local frame_count = 0
 
 local function t2s(t)
     local parts = {}
@@ -57,6 +58,7 @@ end
 
 function m.show(ctx)
     tlog("overlay state transition: off --> on")
+    frame_count = 0
 end
 
 function m.hide(ctx)
@@ -82,6 +84,8 @@ local opts = { image_width = 32, image_hmargin = 4, image_vmargin = 2 }
 function m.overlay_on(ctx)
     local memory_used = collectgarbage("count")
     local text = string.format("ctx: %s\nLua memory used: %d KB", t2s(ctx), memory_used)
+    opts.image_alpha = frame_count / 60.0
+    frame_count = math.min(frame_count + 1, 60.0)
     return text, image_path, opts
 end
 
