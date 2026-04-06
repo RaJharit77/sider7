@@ -1,0 +1,17 @@
+{
+  "events": {
+    "proceed": {
+      "to": "Intro/IntroEnd",
+      "go": "forward",
+      "clear": "all",
+      "fadeStart": "",
+      "fadeEnd": "do",
+      "bgType": "none"
+    }
+  },
+  "data": {
+    "type": "process",
+    "bgId": "",
+    "dialog": ""
+  }
+}
