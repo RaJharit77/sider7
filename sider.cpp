@@ -3129,19 +3129,11 @@ void sider_get_size(char *filename, struct FILE_INFO *fi)
     }}
     if (fn != NULL) {
         DBG(4) log_(L"get_size:: livecpk file found: %s\n", fn);
-        HANDLE handle = CreateFileW(fn,  // file to open
-                           GENERIC_READ,          // open for reading
-                           FILE_SHARE_READ,       // share for reading
-                           NULL,                  // default security
-                           OPEN_EXISTING,         // existing file only
-                           FILE_ATTRIBUTE_NORMAL, // normal file
-                           NULL);                 // no attr. template
-
-        if (handle != INVALID_HANDLE_VALUE)
+        LONGLONG sz_ll = 0;
+        if (file_exists(fn, &sz_ll))
         {
-            DWORD sz = GetFileSize(handle, NULL);
+            DWORD sz = (DWORD)(sz_ll & 0xffffffff);
             DBG(4) log_(L"get_size:: livecpk file size: %x\n", sz);
-            CloseHandle(handle);
             fi->size = sz;
             fi->size_uncompressed = sz;
             //fi->offset_in_cpk = 0;
