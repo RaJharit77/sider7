@@ -1989,25 +1989,19 @@ wchar_t* have_live_file(char *file_name)
 
 bool file_exists(wchar_t *fullpath, LONGLONG *size)
 {
-    HANDLE handle = CreateFileW(
-        fullpath,     // file to open
-        GENERIC_READ,          // open for reading
-        FILE_SHARE_READ,       // share for reading
-        NULL,                  // default security
-        OPEN_EXISTING,         // existing file only
-        FILE_ATTRIBUTE_NORMAL,  // normal file
-        NULL);                 // no attr. template
-
-    if (handle != INVALID_HANDLE_VALUE)
-    {
-        if (size != NULL) {
-            DWORD *p = (DWORD*)size;
-            *size = GetFileSize(handle, p+1);
-        }
-        CloseHandle(handle);
-        return true;
+    WIN32_FILE_ATTRIBUTE_DATA data;
+    if (!GetFileAttributesExW(fullpath, GetFileExInfoStandard, &data)) {
+        return false;
     }
-    return false;
+
+    if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+        return false;
+    }
+
+    if (size != NULL) {
+        *size = ((LONGLONG)data.nFileSizeHigh << 32) | data.nFileSizeLow;
+    }
+    return true;
 }
 
 void clear_context_fields(const char **names, size_t num_items)
