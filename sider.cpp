@@ -1991,7 +1991,13 @@ wchar_t* have_live_file(char *file_name)
     return _have_live_file(file_name);
 }
 
-bool file_exists(wchar_t *fullpath, LONGLONG *size)
+inline bool file_exists(wchar_t *fullpath)
+{
+    DWORD attr = GetFileAttributesW(fullpath);
+    return (attr != INVALID_FILE_ATTRIBUTES) && !(attr & FILE_ATTRIBUTE_DIRECTORY);
+}
+
+bool file_exists_get_size(wchar_t *fullpath, LONGLONG *size)
 {
     WIN32_FILE_ATTRIBUTE_DATA data;
     if (!GetFileAttributesExW(fullpath, GetFileExInfoStandard, &data)) {
@@ -3011,7 +3017,7 @@ wchar_t *module_get_filepath(module_t *m, const char *file_name, char *key)
         lua_pop(L, 1);
 
         // verify that file exists
-        if (res && !file_exists(res, NULL)) {
+        if (res && !file_exists(res)) {
             delete res;
             res = NULL;
         }
@@ -3134,7 +3140,7 @@ void sider_get_size(char *filename, struct FILE_INFO *fi)
     if (fn != NULL) {
         DBG(4) log_(L"get_size:: livecpk file found: %s\n", fn);
         LONGLONG sz_ll = 0;
-        if (file_exists(fn, &sz_ll))
+        if (file_exists_get_size(fn, &sz_ll))
         {
             DWORD sz = (DWORD)(sz_ll & 0xffffffff);
             DBG(4) log_(L"get_size:: livecpk file size: %x\n", sz);
