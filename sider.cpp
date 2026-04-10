@@ -1968,21 +1968,11 @@ wchar_t* _have_live_file(char *file_name)
         wcsncat(fn, it->c_str(), 512);
         wchar_t *p = (unicode_filename[0] == L'\\') ? unicode_filename + 1 : unicode_filename;
         wcsncat(fn, p, 512);
-
-        HANDLE handle;
-        handle = CreateFileW(fn,           // file to open
-                           GENERIC_READ,          // open for reading
-                           FILE_SHARE_READ,       // share for reading
-                           NULL,                  // default security
-                           OPEN_EXISTING,         // existing file only
-                           FILE_ATTRIBUTE_NORMAL,  // normal file
-                           NULL);                 // no attr. template
-
-        if (handle != INVALID_HANDLE_VALUE)
+        
+        DWORD attr = GetFileAttributesW(fn);
+        if (attr != INVALID_FILE_ATTRIBUTES && !(attr & FILE_ATTRIBUTE_DIRECTORY))
         {
-            CloseHandle(handle);
             Utf8::free(unicode_filename);
-            //return new wstring(fn);
             return wcsdup(fn);
         }
     }
@@ -1999,25 +1989,19 @@ wchar_t* have_live_file(char *file_name)
 
 bool file_exists(wchar_t *fullpath, LONGLONG *size)
 {
-    HANDLE handle = CreateFileW(
-        fullpath,     // file to open
-        GENERIC_READ,          // open for reading
-        FILE_SHARE_READ,       // share for reading
-        NULL,                  // default security
-        OPEN_EXISTING,         // existing file only
-        FILE_ATTRIBUTE_NORMAL,  // normal file
-        NULL);                 // no attr. template
-
-    if (handle != INVALID_HANDLE_VALUE)
-    {
-        if (size != NULL) {
-            DWORD *p = (DWORD*)size;
-            *size = GetFileSize(handle, p+1);
-        }
-        CloseHandle(handle);
-        return true;
+    WIN32_FILE_ATTRIBUTE_DATA data;
+    if (!GetFileAttributesExW(fullpath, GetFileExInfoStandard, &data)) {
+        return false;
     }
-    return false;
+
+    if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+        return false;
+    }
+
+    if (size != NULL) {
+        *size = ((LONGLONG)data.nFileSizeHigh << 32) | data.nFileSizeLow;
+    }
+    return true;
 }
 
 void clear_context_fields(const char **names, size_t num_items)
@@ -3145,19 +3129,11 @@ void sider_get_size(char *filename, struct FILE_INFO *fi)
     }}
     if (fn != NULL) {
         DBG(4) log_(L"get_size:: livecpk file found: %s\n", fn);
-        HANDLE handle = CreateFileW(fn,  // file to open
-                           GENERIC_READ,          // open for reading
-                           FILE_SHARE_READ,       // share for reading
-                           NULL,                  // default security
-                           OPEN_EXISTING,         // existing file only
-                           FILE_ATTRIBUTE_NORMAL, // normal file
-                           NULL);                 // no attr. template
-
-        if (handle != INVALID_HANDLE_VALUE)
+        LONGLONG sz_ll = 0;
+        if (file_exists(fn, &sz_ll))
         {
-            DWORD sz = GetFileSize(handle, NULL);
+            DWORD sz = (DWORD)(sz_ll & 0xffffffff);
             DBG(4) log_(L"get_size:: livecpk file size: %x\n", sz);
-            CloseHandle(handle);
             fi->size = sz;
             fi->size_uncompressed = sz;
             //fi->offset_in_cpk = 0;
