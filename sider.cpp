@@ -413,6 +413,9 @@ HANDLE sider_CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShar
 BOOL sider_MoveFileExW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileName, DWORD dwFlags);
 BOOL sider_DeleteFileW(LPCWSTR lpFileName);
 
+HANDLE sider_FindFirstFileW(LPCWSTR lpFileName, LPWIN32_FIND_DATAW lpFindFileData);
+DWORD sider_GetFileAttributesW(LPCWSTR lpFileName);
+
 typedef HRESULT (*PFN_CreateDXGIFactory1)(REFIID riid, void **ppFactory);
 typedef HRESULT (*PFN_IDXGIFactory1_CreateSwapChain)(IDXGIFactory1 *pFactory, IUnknown *pDevice, DXGI_SWAP_CHAIN_DESC *pDesc, IDXGISwapChain **ppSwapChain);
 typedef HRESULT (*PFN_IDXGISwapChain_Present)(IDXGISwapChain *swapChain, UINT SyncInterval, UINT Flags);
@@ -1960,13 +1963,14 @@ wchar_t* _have_live_file(char *file_name)
     //memset(unicode_filename, 0, sizeof(unicode_filename));
     //Utf8::fUtf8ToUnicode(unicode_filename, file_name);
 
+    wchar_t *p = (unicode_filename[0] == L'\\') ? unicode_filename + 1 : unicode_filename;
+
     wchar_t fn[512];
     for (vector<wstring>::iterator it = _config->_cpk_roots.begin();
             it != _config->_cpk_roots.end();
             it++) {
         fn[0] = L'\0';
         wcsncat(fn, it->c_str(), 512);
-        wchar_t *p = (unicode_filename[0] == L'\\') ? unicode_filename + 1 : unicode_filename;
         wcsncat(fn, p, 512);
         
         DWORD attr = GetFileAttributesW(fn);
@@ -4692,6 +4696,58 @@ BOOL sider_DeleteFileW(LPCWSTR lpFileName)
     return result;
 }
 
+HANDLE sider_FindFirstFileW(LPCWSTR lpFileName, LPWIN32_FIND_DATAW lpFindFileData)
+{
+    wstring newPath;
+    bool changed(false);
+    DBG(65536) log_(L"sider_FindFirstFileW:: called for {%s}\n", lpFileName);
+    if (!_config->_save_folder.empty()) {
+        wchar_t *p = wcsrchr((wchar_t*)lpFileName, L'\\');
+        if (p) {
+            wchar_t *filename = p+1;
+            if (fileFromUserSave(lpFileName)) {
+                if (_config->_save_folder[0] == L'.') {
+                    newPath += sider_dir;
+                }
+                newPath += _config->_save_folder;
+                newPath += filename;
+
+                lpFileName = newPath.c_str();
+                changed = true;
+            }
+        }
+    }
+    HANDLE result = FindFirstFileW(lpFileName, lpFindFileData);
+    if (changed) log_(L"sider_FindFirstFileW:: using {%s} --> result: %p\n", lpFileName, result);
+    return result;
+}
+
+DWORD sider_GetFileAttributesW(LPCWSTR lpFileName)
+{
+    wstring newPath;
+    bool changed(false);
+    DBG(65536) log_(L"sider_GetFileAttributesW:: called for {%s}\n", lpFileName);
+    if (!_config->_save_folder.empty()) {
+        wchar_t *p = wcsrchr((wchar_t*)lpFileName, L'\\');
+        if (p) {
+            wchar_t *filename = p+1;
+            if (fileFromUserSave(lpFileName)) {
+                if (_config->_save_folder[0] == L'.') {
+                    newPath += sider_dir;
+                }
+                newPath += _config->_save_folder;
+                newPath += filename;
+
+                lpFileName = newPath.c_str();
+                changed = true;
+            }
+        }
+    }
+    DWORD result = GetFileAttributesW(lpFileName);
+    if (changed) log_(L"sider_GetFileAttributesW:: using {%s} --> result: %04x\n", lpFileName, result);
+    return result;
+}
+
 HRESULT sider_CreateDXGIFactory1(REFIID riid, void **ppFactory)
 {
     HRESULT hr = _org_CreateDXGIFactory1(riid, ppFactory);
@@ -7124,7 +7180,7 @@ DWORD install_func(LPVOID thread_param) {
     hook_cache_t hcache(cache_file);
 
     // prepare patterns
-#define NUM_PATTERNS 45
+#define NUM_PATTERNS 47
     BYTE *frag[NUM_PATTERNS+1];
     frag[1] = lcpk_pattern_at_read_file;
     frag[2] = lcpk_pattern_at_get_size;
@@ -7171,6 +7227,8 @@ DWORD install_func(LPVOID thread_param) {
     frag[43] = pattern_createfilew;
     frag[44] = pattern_movefileexw;
     frag[45] = pattern_deletefilew;
+    frag[46] = pattern_getfileattributesw;
+    frag[47] = pattern_findfirstfilew;
 
     memset(_variations, 0xff, sizeof(_variations));
     _variations[1] = 24;
@@ -7239,6 +7297,8 @@ DWORD install_func(LPVOID thread_param) {
     frag_len[43] = sizeof(pattern_createfilew)-1;
     frag_len[44] = sizeof(pattern_movefileexw)-1;
     frag_len[45] = sizeof(pattern_deletefilew)-1;
+    frag_len[46] = sizeof(pattern_getfileattributesw)-1;
+    frag_len[47] = sizeof(pattern_findfirstfilew)-1;
 
     int offs[NUM_PATTERNS+1];
     offs[1] = lcpk_offs_at_read_file;
@@ -7286,6 +7346,8 @@ DWORD install_func(LPVOID thread_param) {
     offs[43] = offs_createfilew;
     offs[44] = offs_movefileexw;
     offs[45] = offs_deletefilew;
+    offs[46] = offs_getfileattributesw;
+    offs[47] = offs_findfirstfilew;
 
     BYTE **addrs[NUM_PATTERNS+1];
     addrs[1] = &_config->_hp_at_read_file;
@@ -7333,6 +7395,8 @@ DWORD install_func(LPVOID thread_param) {
     addrs[43] = &_config->_hp_at_createfilew;
     addrs[44] = &_config->_hp_at_movefileexw;
     addrs[45] = &_config->_hp_at_deletefilew;
+    addrs[46] = &_config->_hp_at_getfileattributesw;
+    addrs[47] = &_config->_hp_at_findfirstfilew;
 
     // check hook cache first
     for (int i=0;; i++) {
@@ -7472,7 +7536,9 @@ bool all_found(config_t *cfg) {
         cfg->_hp_at_dxgi > 0 &&
         cfg->_hp_at_createfilew > 0 &&
         cfg->_hp_at_movefileexw > 0 &&
-        cfg->_hp_at_deletefilew > 0
+        cfg->_hp_at_deletefilew > 0 &&
+        cfg->_hp_at_getfileattributesw > 0 &&
+        cfg->_hp_at_findfirstfilew > 0
     );
     if (cfg->_free_side_select) {
         all = all && (
@@ -7565,6 +7631,12 @@ bool hook_if_all_found() {
         }
         if (_config->_hp_at_deletefilew) {
             hook_indirect_call(_config->_hp_at_deletefilew, (BYTE*)sider_DeleteFileW);
+        }
+        if (_config->_hp_at_getfileattributesw) {
+            hook_indirect_call(_config->_hp_at_getfileattributesw, (BYTE*)sider_GetFileAttributesW);
+        }
+        if (_config->_hp_at_findfirstfilew) {
+            hook_indirect_call(_config->_hp_at_findfirstfilew, (BYTE*)sider_FindFirstFileW);
         }
 
         if (_config->_lua_enabled) {
