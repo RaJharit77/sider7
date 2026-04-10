@@ -4,35 +4,41 @@
 
 local strings = {
     "pes21-x64-gate.cs.konami.net",
+    "pes21-x64-stun.cs.konami.net",
 }
 local replacer = "0.0.0.0"
 local content_root = ".\\content\\netblock\\"
+local block_check = true
 
 local m = {}
-m.version = "0.2"
+m.version = "0.3"
 
 function m.get_filepath(ctx, filename, key)
-    --log(string.format("wants: %s", filename))
     if key then
-        return content_root .. key
+        if string.match(filename, "common\\script\\flow\\Exhibition\\ExhibiUgcCheck.json") then
+            return content_root .. filename
+        elseif block_check and string.match(filename, "common\\script\\flow\\Intro\\DataPackApply\\ProcEnd.json") then --log("Invalid filename: " .. tostring(filename))
+            block_check = false
+            return content_root .. filename
+        end
     end
 end
 
 function m.init(ctx)
     log("version " .. m.version)
-    if content_root:sub(1,1) == "." then
+    if content_root:sub(1, 1) == "." then
         content_root = ctx.sider_dir .. content_root
     end
 
     ctx.register("livecpk_get_filepath", m.get_filepath)
 
-    for _,s in ipairs(strings) do
+    for _, s in ipairs(strings) do
         addr, info = memory.search_process(s .. "\x00")
         if not addr then
             log(string.format('warning: unable to find string: "%s" in memory', s))
         else
             log(string.format('string "%s" found at %s. Replacing with "%s"', s, memory.hex(addr), replacer))
-            memory.write(addr, replacer .."\x00")
+            memory.write(addr, replacer .. "\x00")
         end
     end
 end
