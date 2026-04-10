@@ -1,6 +1,6 @@
 -- Module to prevent the game from connecting to network
 -- Also, skips LiveUpdate before exhibition matches
--- by Hawke, zlac and juce
+-- by Hawke, zlac and juce, Mohamed2746
 
 local strings = {
     "pes21-x64-gate.cs.konami.net",
@@ -8,19 +8,13 @@ local strings = {
 }
 local replacer = "0.0.0.0"
 local content_root = ".\\content\\netblock\\"
-local block_check = true
 
 local m = {}
 m.version = "0.3"
 
 function m.get_filepath(ctx, filename, key)
     if key then
-        if string.match(filename, "common\\script\\flow\\Exhibition\\ExhibiUgcCheck.json") then
-            return content_root .. filename
-        elseif block_check and string.match(filename, "common\\script\\flow\\Intro\\DataPackApply\\ProcEnd.json") then --log("Invalid filename: " .. tostring(filename))
-            block_check = false
-            return content_root .. filename
-        end
+        return content_root .. key
     end
 end
 
