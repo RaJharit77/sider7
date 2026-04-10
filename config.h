@@ -117,6 +117,8 @@ public:
     BYTE *_hp_at_createfilew;
     BYTE *_hp_at_movefileexw;
     BYTE *_hp_at_deletefilew;
+    BYTE *_hp_at_getfileattributesw;
+    BYTE *_hp_at_findfirstfilew;
 
     BYTE *_hp_at_set_min_time;
     BYTE *_hp_at_set_max_time;
@@ -208,6 +210,8 @@ public:
                  _hp_at_createfilew(NULL),
                  _hp_at_movefileexw(NULL),
                  _hp_at_deletefilew(NULL),
+                 _hp_at_getfileattributesw(NULL),
+                 _hp_at_findfirstfilew(NULL),
                  _hook_set_team_id(true),
                  _hook_set_settings(true),
                  _hook_context_reset(true),

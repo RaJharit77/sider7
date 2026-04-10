@@ -934,4 +934,36 @@ static BYTE pattern_deletefilew[] =
     "\xff\x15";
 static int offs_deletefilew = 0x7f - 0x6e;
 
+/**
+0000000140405382 | 49:83C9 FF                      | or r9,FFFFFFFFFFFFFFFF                  |
+0000000140405386 | 66:894424 20                    | mov word ptr ss:[rsp+20],ax             |
+000000014040538B | BA 08020000                     | mov edx,208                             |
+0000000140405390 | 48:8D4C24 20                    | lea rcx,qword ptr ss:[rsp+20]           |
+0000000140405395 | FF15 0DB21202                   | call qword ptr ds:[<&wcsncat_s>]        |
+000000014040539B | 48:8D4C24 20                    | lea rcx,qword ptr ss:[rsp+20]           |
+00000001404053A0 | FF15 429E1202                   | call qword ptr ds:[<&GetFileAttributesW |
+**/
+static BYTE pattern_getfileattributesw[] =
+    "\x49\x83\xc9\xff"
+    "\x66\x89\x44\x24\x20"
+    "\xba\x08\x02\x00\x00"
+    "\x48\x8d\x4c\x24\x20"
+    "\xff\x15";
+static int offs_getfileattributesw = 0xa0 - 0x82;
+
+/**
+000000014140D343 | 48:8D4D C0                      | lea rcx,qword ptr ss:[rbp-40]           |
+000000014140D347 | 48:837D D8 08                   | cmp qword ptr ss:[rbp-28],8             |
+000000014140D34C | 48:0F434D C0                    | cmovae rcx,qword ptr ss:[rbp-40]        |
+000000014140D351 | 48:8D55 40                      | lea rdx,qword ptr ss:[rbp+40]           |
+000000014140D355 | FF15 3D1F1201                   | call qword ptr ds:[<&FindFirstFileW>]   |
+**/
+static BYTE pattern_findfirstfilew[] =
+    "\x48\x8d\x4d\xc0"
+    "\x48\x83\x7d\xd8\x08"
+    "\x48\x0f\x43\x4d\xc0"
+    "\x48\x8d\x55\x40"
+    "\xff\x15";
+static int offs_findfirstfilew = 0x55 - 0x43;
+
 #endif
