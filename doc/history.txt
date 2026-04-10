@@ -2,6 +2,13 @@ Sider 7 Release History
 =======================
 
 
+April 10, 2026
+v7.4.1
+- fixes for "save.folder" logic: no more "corrupt" save files, and unnecessary SYSTEM00000000 file overwrites.
+- improved netblock.lua: skipping more network/online/live-update checks
+- performance improvements for file existence checks for livecpk and livecpk events in Lua modules
+
+
 April 4, 2026
 v7.4.0
 - support for controlling overlay text/background colors and image alpha from Lua modules. Thanks to Mohamed2746!
