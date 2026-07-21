@@ -197,9 +197,9 @@ struct MATCH_INFO_STRUCT {
     DWORD unknown9[8];
     struct STAD_STRUCT stad;
     BYTE unknown10[0x88];
-    DWORD kickoff_timestamp;
+    int32_t kickoff_timestamp;
     DWORD unknown11[3];
-    DWORD kickoff_timestamp_org;
+    int32_t kickoff_timestamp_org;
     DWORD unknown12[1];
     BYTE home_player_kit_id;
     BYTE home_player_kit_id_unknown[3];
@@ -305,6 +305,7 @@ KIT_STATUS_INFO *_ksi = NULL;
 TEAM_INFO_STRUCT *_home_team_info = NULL;
 TEAM_INFO_STRUCT *_away_team_info = NULL;
 DWORD _edit_team_id;
+DWORD _last_kickoff_timestamp_org = 0;
 
 extern "C" SCOREBOARD_INFO *_sci = NULL;
 int _stats_table_index = 0;
@@ -1650,7 +1651,6 @@ struct module_t {
     int evt_set_stadium;
     int evt_set_conditions;
     int evt_set_match_settings;
-    int evt_set_kickoff_datetime;
     int evt_after_set_conditions;
     /*
     int evt_set_stadium_for_replay;
@@ -2339,36 +2339,6 @@ bool module_set_match_settings(module_t *m, MATCH_INFO_STRUCT *mi)
     return res;
 }
 
-bool module_set_kickoff_datetime(module_t *m, MATCH_INFO_STRUCT *mi)
-{
-    bool res(false);
-    if (m->evt_set_kickoff_datetime != 0) {
-        //int x = 0;
-        //int y = 1/x;
-
-        EnterCriticalSection(&_cs);
-        lua_pushvalue(m->L, m->evt_set_kickoff_datetime);
-        lua_xmove(m->L, L, 1);
-        // push params
-        lua_pushvalue(L, 1); // ctx
-        lua_pushinteger(L, mi->kickoff_timestamp_org);
-        if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
-            const char *err = luaL_checkstring(L, -1);
-            logu_("[%d] lua ERROR from module_set_kickoff_datetime: %s\n", GetCurrentThreadId(), err);
-        }
-        else {
-            mi->kickoff_timestamp = mi->kickoff_timestamp_org;
-            if (lua_isnumber(L, -1)) {
-                mi->kickoff_timestamp = luaL_checkinteger(L, -1);
-                res = true;
-            }
-        }
-        lua_pop(L, 1);
-        LeaveCriticalSection(&_cs);
-    }
-    return res;
-}
-
 bool module_set_conditions(module_t *m, MATCH_INFO_STRUCT *mi)
 {
     bool res(false);
@@ -2394,6 +2364,14 @@ bool module_set_conditions(module_t *m, MATCH_INFO_STRUCT *mi)
         lua_setfield(L, -2, "length_of_grass");
         lua_pushinteger(L, mi->field_conditions_choice);
         lua_setfield(L, -2, "field_conditions");
+        if (mi->kickoff_timestamp_org != 0) {
+            _last_kickoff_timestamp_org = mi->kickoff_timestamp_org;
+            lua_pushinteger(L, mi->kickoff_timestamp_org);
+            lua_setfield(L, -2, "kickoff_timestamp");
+        } else if (_last_kickoff_timestamp_org != 0) {
+            lua_pushinteger(L, _last_kickoff_timestamp_org);
+            lua_setfield(L, -2, "kickoff_timestamp");
+        }
         if (lua_pcall(L, 2, 1, 0) != LUA_OK) {
             const char *err = luaL_checkstring(L, -1);
             logu_("[%d] lua ERROR from module_set_conditions: %s\n", GetCurrentThreadId(), err);
@@ -2427,6 +2405,12 @@ bool module_set_conditions(module_t *m, MATCH_INFO_STRUCT *mi)
             lua_getfield(L, -1, "field_conditions");
             if (lua_isnumber(L, -1)) {
                 mi->field_conditions_choice = luaL_checkinteger(L, -1);
+            }
+            lua_pop(L, 1);
+            lua_getfield(L, -1, "kickoff_timestamp");
+            if (lua_isnumber(L, -1)) {
+                int32_t ts = luaL_checkinteger(L, -1);
+                mi->kickoff_timestamp = ts;
             }
             lua_pop(L, 1);
             res = true;
@@ -2503,6 +2487,10 @@ void module_custom_event(module_t *m, custom_event_t *ce, REGISTERS *regs)
 
 void module_set_teams(module_t *m, DWORD home, DWORD away) //, TEAM_INFO_STRUCT *home_team_info, TEAM_INFO_STRUCT *away_team_info)
 {
+    // reset _last_kickoff_timestamp_org
+    // so that we don't carry old timestamp from previous match
+    _last_kickoff_timestamp_org = 0;
+
     if (m->evt_set_teams != 0) {
         EnterCriticalSection(&_cs);
         lua_pushvalue(m->L, m->evt_set_teams);
@@ -5224,6 +5212,9 @@ void sider_set_settings(STAD_STRUCT *dest_ss, STAD_STRUCT *src_ss)
                 break;
             }
         }
+
+        set_context_field_int("stadium", dest_ss->stadium);
+
         for (i = _modules.begin(); i != _modules.end(); i++) {
             module_t *m = *i;
             if (module_set_conditions(m, mi)) {
@@ -5231,7 +5222,6 @@ void sider_set_settings(STAD_STRUCT *dest_ss, STAD_STRUCT *src_ss)
             }
         }
 
-        set_context_field_int("stadium", dest_ss->stadium);
         set_context_field_int("timeofday", dest_ss->timeofday);
         set_context_field_int("weather", dest_ss->weather);
         set_context_field_int("weather_effects", mi->weather_effects);
@@ -5251,13 +5241,6 @@ void sider_set_settings(STAD_STRUCT *dest_ss, STAD_STRUCT *src_ss)
         set_context_field_int("penalties", mi->penalties);
         set_context_field_int("substitutions", mi->num_subs);
         set_context_field_int("substitutions_in_extra_time", mi->num_subs_et);
-
-        for (i = _modules.begin(); i != _modules.end(); i++) {
-            module_t *m = *i;
-            if (module_set_kickoff_datetime(m, mi)) {
-                break;
-            }
-        }
 
         // clear stadium_choice in context
         //set_context_field_nil("stadium_choice");
@@ -5310,6 +5293,7 @@ void sider_context_reset()
     _sci = NULL;
     _home_team_info = NULL;
     _away_team_info = NULL;
+    _last_kickoff_timestamp_org = 0;
 
     logu_("context reset\n");
 
@@ -6373,12 +6357,6 @@ static int sider_context_register(lua_State *L)
         lua_pushvalue(L, -1);
         lua_xmove(L, _curr_m->L, 1);
         _curr_m->evt_set_match_settings = lua_gettop(_curr_m->L);
-        logu_("Registered for \"%s\" event\n", event_key);
-    }
-    else if (strcmp(event_key, "set_kickoff_datetime")==0) {
-        lua_pushvalue(L, -1);
-        lua_xmove(L, _curr_m->L, 1);
-        _curr_m->evt_set_kickoff_datetime = lua_gettop(_curr_m->L);
         logu_("Registered for \"%s\" event\n", event_key);
     }
     else if (strcmp(event_key, "after_set_conditions")==0) {
